@@ -1,0 +1,11 @@
+.local_test
+downloads
+**/__pycache__
+**/*.pyc
+.git
+.gitignore
+*.log
+ssh_info.txt
+github_token.txt
+.env
+README.md

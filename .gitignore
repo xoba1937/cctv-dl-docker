@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.pyc
+
+# 下载内容（视频不入库）
+downloads/*
+!downloads/.gitignore
+
+# 本地环境
+.env
+.local_test
+
+# 系统/编辑器
+.DS_Store
+*.log
+.vscode/
+.idea/
+
+# 敏感信息
+ssh_info.txt
+github_token.txt
+
+# 离线镜像包(不入库，通过网盘分发)
+*.tar

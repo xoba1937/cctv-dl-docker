@@ -1,0 +1,13 @@
+services:
+  cctv-dl-docker:
+    build: .
+    image: cctv-dl-docker:v4.4.0
+    container_name: cctv-dl-docker
+    restart: unless-stopped
+    ports:
+      - "${PORT:-3322}:3322"
+    volumes:
+      - "${DOWNLOAD_DIR:-./downloads}:/downloads"
+    environment:
+      - PORT=3322
+      - DOWNLOAD_DIR=/downloads

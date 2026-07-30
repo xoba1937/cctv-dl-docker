@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>央视视频下载器</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root { --blue:#4c6ef5; --blue-hover:#3b5bdb; --bg:#f4f6fa; --border:#e3e6ec; --text:#1f2430; --muted:#8b909c; --panel:#fff; --radius:10px; }
+  body { font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif; background:var(--bg); color:var(--text); font-size:14px; }
+  .app { max-width:1160px; margin:0 auto; padding:20px; }
+  .header { display:flex; align-items:center; gap:20px; padding:4px 4px 0; }
+  .brand { font-weight:700; font-size:18px; white-space:nowrap; }
+  .tabs { display:flex; gap:4px; border-bottom:1px solid var(--border); flex:1; }
+  .tab { padding:10px 22px; cursor:pointer; font-size:14px; color:var(--muted); border-bottom:2px solid transparent; transition:.15s; position:relative; bottom:-1px; }
+  .tab:hover { color:var(--text); }
+  .tab.active { color:var(--blue); border-bottom-color:var(--blue); font-weight:600; }
+  .logout-btn { padding:6px 14px; font-size:13px; }
+  .panel { background:var(--panel); border:1px solid var(--border); border-radius:var(--radius); padding:18px; margin-top:16px; }
+  .card + .card { margin-top:14px; }
+  .card-title { font-size:13px; font-weight:600; color:var(--muted); margin-bottom:10px; letter-spacing:.5px; }
+  button { cursor:pointer; border:1px solid var(--border); background:#fff; border-radius:8px; padding:7px 16px; font-size:13px; color:var(--text); transition:.15s; }
+  button:hover { background:#f0f2f7; }
+  button.primary { background:var(--blue); color:#fff; border-color:var(--blue); }
+  button.primary:hover { background:var(--blue-hover); }
+  button:disabled { opacity:.5; cursor:not-allowed; }
+  button.sm { padding:5px 12px; font-size:12px; }
+  .input-wrap { display:flex; gap:8px; }
+  .input-box { position:relative; flex:1; }
+  .input-box input { width:100%; border:1px solid var(--border); border-radius:8px; padding:9px 32px 9px 12px; font-size:13px; outline:none; }
+  .input-box input:focus { border-color:var(--blue); }
+  .clear-x { position:absolute; right:8px; top:50%; transform:translateY(-50%); cursor:pointer; color:var(--muted); font-size:16px; display:none; border:none; background:none; padding:2px 4px; }
+  .clear-x:hover { color:var(--text); background:none; }
+  .input-box.has-val .clear-x { display:block; }
+  select { border:1px solid var(--border); border-radius:8px; padding:7px 10px; font-size:13px; outline:none; background:#fff; }
+  select:focus { border-color:var(--blue); }
+  .settings-grid { display:flex; flex-wrap:wrap; gap:16px 24px; align-items:center; }
+  .set-item { display:flex; align-items:center; gap:8px; }
+  .set-item label { color:var(--muted); font-size:13px; white-space:nowrap; }
+  .radio-row { display:flex; gap:14px; }
+  .radio-row label { display:flex; align-items:center; gap:5px; cursor:pointer; }
+  .list-toolbar { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+  .list-toolbar .left { display:flex; align-items:center; gap:10px; color:var(--muted); font-size:13px; }
+  .list-box { border:1px solid var(--border); border-radius:8px; overflow:hidden; }
+  .vtable { width:100%; border-collapse:collapse; }
+  .vtable th { background:#f2f4f8; padding:10px 12px; font-size:12px; color:var(--muted); text-align:left; font-weight:600; position:sticky; top:0; vertical-align:middle; }
+  .vtable th.chk-col, .vtable td.chk-col { width:42px; text-align:center; }
+  .vtable td { padding:10px 12px; border-top:1px solid #f0f1f4; font-size:13px; vertical-align:middle; }
+  .vtable tbody tr:hover { background:#eef1fb; }
+  .vtable tbody tr.checked { background:#f5f7ff; }
+  .vscroll { max-height:440px; overflow-y:auto; }
+  input[type=checkbox] { width:16px; height:16px; cursor:pointer; accent-color:var(--blue); vertical-align:middle; margin:0; }
+  .col-idx { color:var(--muted); width:48px; }
+  .col-len { color:var(--muted); width:72px; text-align:right; }
+  .empty { text-align:center; color:var(--muted); padding:40px 10px; }
+  .pager { display:flex; align-items:center; justify-content:center; gap:12px; margin-top:14px; font-size:13px; color:var(--muted); }
+  .pager button { padding:5px 12px; }
+  .preview-ph { background:#eef0f5; border-radius:8px; height:170px; display:flex; align-items:center; justify-content:center; color:var(--muted); flex-direction:column; gap:4px; }
+  .preview-ph .sub { font-size:12px; }
+  .detail-body { padding-top:16px; }
+  .detail-body h2 { font-size:15px; margin-bottom:10px; line-height:1.4; }
+  .meta-row { display:flex; color:var(--muted); font-size:12px; line-height:2; }
+  .meta-row .k { width:64px; }
+  .meta-row .v { color:var(--text); }
+  .brief-ph { margin-top:14px; padding-top:14px; border-top:1px solid var(--border); color:var(--muted); font-size:13px; line-height:1.7; }
+  .dl-btn-row { margin-top:18px; }
+  .dl-btn-row .primary { width:100%; padding:11px; font-size:14px; }
+  .rec-toolbar { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
+  .rec-hint { font-size:12px; color:var(--muted); margin-bottom:12px; }
+  .rec-hint code { background:#eef0f5; padding:2px 6px; border-radius:4px; color:var(--text); }
+  .task-item { border:1px solid var(--border); border-radius:8px; padding:12px 14px; margin-bottom:10px; }
+  .task-item .t-hd { display:flex; justify-content:space-between; align-items:center; gap:10px; }
+  .task-item .t-hd b { font-size:14px; }
+  .status-tag { font-size:12px; padding:3px 10px; border-radius:5px; white-space:nowrap; }
+  .st-completed{background:#e6f7ed;color:#1a9d54;} .st-running{background:#e8ecff;color:var(--blue);}
+  .st-failed{background:#fdeaea;color:#d84040;} .st-invalid{background:#fdeaea;color:#d84040;}
+  .st-queued{background:#f0f0f3;color:var(--muted);} .st-cancelled{background:#f0f0f3;color:var(--muted);}
+  .progress-bar { height:8px; background:#eceef2; border-radius:5px; overflow:hidden; margin:10px 0 6px; }
+  .progress-bar > div { height:100%; background:var(--blue); width:0%; transition:width .3s; }
+  .meta { color:var(--muted); font-size:12px; }
+  .link-sm { color:var(--blue); text-decoration:none; font-size:13px; }
+  .link-sm:hover { text-decoration:underline; }
+  .about-body { line-height:1.9; }
+  .about-body h3 { font-size:15px; margin:16px 0 8px; color:var(--blue); }
+  .about-body h3:first-child { margin-top:0; }
+  .about-body p, .about-body li { color:var(--muted); font-size:13px; }
+  .about-body ol { padding-left:20px; }
+  .about-body a { color:var(--blue); }
+  .modal-mask { position:fixed; inset:0; background:rgba(0,0,0,.35); display:none; align-items:center; justify-content:center; z-index:100; }
+  .modal-mask.show { display:flex; }
+  .modal { background:#fff; border-radius:12px; width:380px; max-width:92vw; overflow:hidden; }
+  .modal-bd { padding:24px 22px; text-align:center; font-size:14px; line-height:1.6; }
+  .modal-ft { padding:0 22px 22px; display:flex; gap:10px; }
+  .modal-ft button { flex:1; padding:9px; }
+  .toast { position:fixed; bottom:28px; left:50%; transform:translateX(-50%); background:#2b2f3a; color:#fff; padding:11px 22px; border-radius:8px; font-size:13px; opacity:0; transition:.3s; z-index:200; pointer-events:none; }
+  .toast.show { opacity:1; }
+  /* 登录页 */
+  .login-wrap { max-width:360px; margin:80px auto 0; background:#fff; border:1px solid var(--border); border-radius:12px; padding:32px 28px; }
+  .login-wrap h1 { text-align:center; font-size:20px; margin-bottom:6px; }
+  .login-wrap .sub { text-align:center; color:var(--muted); font-size:13px; margin-bottom:24px; }
+  .login-wrap .field { margin-bottom:16px; }
+  .login-wrap .field label { display:block; margin-bottom:6px; color:var(--muted); font-size:13px; }
+  .login-wrap .field input { width:100%; border:1px solid var(--border); border-radius:8px; padding:10px 12px; font-size:14px; outline:none; }
+  .login-wrap .field input:focus { border-color:var(--blue); }
+  .login-wrap .login-btn { width:100%; padding:11px; font-size:14px; margin-top:8px; }
+  .login-wrap .err { color:#d84040; font-size:13px; text-align:center; min-height:18px; margin-top:8px; }
+</style>
+</head>
+<body>
+
+<!-- 登录页 -->
+<div id="loginPage" class="login-wrap" style="display:none">
+  <h1>央视视频下载器</h1>
+  <div class="sub">请登录后使用</div>
+  <div class="field"><label>账号</label><input type="text" id="loginUser" value="admin" autocomplete="username"></div>
+  <div class="field"><label>密码</label><input type="password" id="loginPw" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()"></div>
+  <button class="primary login-btn" onclick="doLogin()">登 录</button>
+  <div class="err" id="loginErr"></div>
+</div>
+
+<!-- 主应用 -->
+<div id="mainApp" class="app" style="display:none">
+  <div class="header">
+    <div class="brand">央视视频下载器</div>
+    <div class="tabs">
+      <div class="tab active" data-tab="main" onclick="switchTab('main')">下载</div>
+      <div class="tab" data-tab="records" onclick="switchTab('records')">下载记录</div>
+      <div class="tab" data-tab="about" onclick="switchTab('about')">关于</div>
+    </div>
+    <button class="logout-btn" onclick="doLogout()">退出登录</button>
+  </div>
+
+  <div id="tab-main">
+    <div class="layout" style="display:grid; grid-template-columns:1.55fr 1fr; gap:16px; align-items:start">
+      <div>
+        <div class="panel">
+          <div class="card-title">获取视频</div>
+          <div class="input-wrap">
+            <div class="input-box" id="inputBox">
+              <input type="text" id="urlInput" placeholder="粘贴央视节目链接后点击获取视频" oninput="onUrlInput()" onkeydown="if(event.key==='Enter')doFetch()">
+              <button class="clear-x" onclick="clearUrl()" title="清空">×</button>
+            </div>
+            <button class="primary" onclick="doFetch()">获取视频</button>
+            <button onclick="doFetch()" title="刷新" style="font-size:24px;line-height:1">⟳</button>
+          </div>
+        </div>
+        <div class="panel" style="margin-top:14px">
+          <div class="card-title">下载设置</div>
+          <div class="settings-grid">
+            <div class="set-item"><label>清晰度</label><select id="setQuality"></select></div>
+            <div class="set-item"><label>线程数</label><select id="setThreads"></select></div>
+            <div class="set-item"><label>格式</label>
+              <div class="radio-row"><label><input type="radio" name="fmt" value="mp4" checked> MP4</label><label><input type="radio" name="fmt" value="ts"> TS</label></div>
+            </div>
+          </div>
+        </div>
+        <div class="panel" style="margin-top:14px">
+          <div class="list-toolbar">
+            <div class="left"><span id="listCount">视频列表</span><button class="sm" id="clearSelBtn" onclick="clearSelection()" style="display:none">清除已选</button></div>
+            <div class="left"><span>每页</span><select id="pageSize" onchange="changePageSize()"><option value="20">20</option><option value="50">50</option><option value="100">100</option></select><span>条</span></div>
+          </div>
+          <div class="list-box"><div class="vscroll">
+            <table class="vtable"><thead><tr>
+              <th class="chk-col"><input type="checkbox" id="chkAll" onclick="toggleAll(this)"></th>
+              <th class="col-idx">#</th><th>视频标题</th><th class="col-len">时长</th>
+            </tr></thead><tbody id="videoBody"><tr><td colspan="4"><div class="empty">获取视频后显示列表</div></td></tr></tbody></table>
+          </div></div>
+          <div class="pager" id="pager" style="display:none">
+            <button onclick="gotoPage(curPage-1)" id="prevBtn">◀ 上一页</button>
+            <span id="pageInfo"></span>
+            <button onclick="gotoPage(curPage+1)" id="nextBtn">下一页 ▶</button>
+          </div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="preview-ph" id="previewBox"><span>视频封面</span><span class="sub">勾选视频后显示</span></div>
+        <div class="detail-body" id="detailBody">
+          <h2>尚未选择视频</h2>
+          <div class="meta-row"><span class="k">发布时间</span><span class="v">—</span></div>
+          <div class="meta-row"><span class="k">频道</span><span class="v">—</span></div>
+          <div class="meta-row"><span class="k">时长</span><span class="v">—</span></div>
+          <div class="brief-ph">暂无简介</div>
+        </div>
+        <div class="dl-btn-row"><button class="primary" onclick="startDownload()">⬇ 下载选中 (<span id="selCount">0</span>)</button></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="tab-records" class="panel" style="display:none">
+    <div class="rec-toolbar">
+      <div class="card-title" style="margin:0">下载记录</div>
+      <div><button class="sm" onclick="loadTasks()">刷新</button><button class="sm" onclick="clearInvalid()">清理无效记录</button></div>
+    </div>
+    <div class="rec-hint">文件保存目录：<code id="saveDir">/downloads</code></div>
+    <div class="list-toolbar">
+      <div class="left"><span id="recCount"></span></div>
+      <div class="left"><span>每页</span><select id="recPageSize" onchange="changeRecPageSize()"><option value="20">20</option><option value="50">50</option><option value="100">100</option></select><span>条</span></div>
+    </div>
+    <div id="taskList"><div class="empty">暂无下载记录</div></div>
+    <div class="pager" id="recPager" style="display:none">
+      <button onclick="gotoRecPage(recPage-1)" id="recPrevBtn">◀ 上一页</button>
+      <span id="recPageInfo"></span>
+      <button onclick="gotoRecPage(recPage+1)" id="recNextBtn">下一页 ▶</button>
+    </div>
+  </div>
+
+  <div id="tab-about" class="panel about-body" style="display:none">
+    <h3>简介</h3>
+    <p>央视视频下载器，支持浏览央视网节目并下载视频，基于 cctv-dl 命令行工具，Docker 一键部署。</p>
+    <h3>版本</h3>
+    <p>应用版本：<b id="appVersion">v4.4.0</b></p>
+    <h3>平台支持</h3>
+    <p>支持 <b>Linux x86_64 和 arm64</b> 平台，包括 x86/arm NAS、云服务器、Intel Mac 和 Apple Silicon Mac 的 Docker。</p>
+    <h3>使用说明</h3>
+    <ol>
+      <li>在「下载」页粘贴央视节目链接，点击「获取视频」</li>
+      <li>在视频列表中勾选要下载的视频（可多选）</li>
+      <li>在「下载设置」中选择清晰度、线程数和格式</li>
+      <li>点击「下载选中」提交下载任务</li>
+      <li>在「下载记录」页查看进度，完成后到保存目录取文件</li>
+    </ol>
+    <h3>修改密码</h3>
+    <p>在服务器执行：<code>docker exec -it cctv-dl-docker python3 /app/backend/cli.py password</code><br>（生成新随机密码；加 <code>--set 新密码</code> 可指定密码）</p>
+    <h3>技术说明</h3>
+    <p>核心解析、下载、解密能力来自 <a href="https://github.com/letr007/CCTVVideoDownloader" target="_blank">letr007/CCTVVideoDownloader</a> 的 cctv-dl 工具，本项目仅做 Web 界面与 Docker 封装。</p>
+    <h3>项目地址</h3>
+    <p><a href="https://github.com/xoba1937/cctv-dl-docker" target="_blank">https://github.com/xoba1937/cctv-dl-docker</a></p>
+    <h3>免责声明</h3>
+    <p>本工具仅供技术研究和学习交流使用。央视视频内容版权归中央广播电视总台所有，严禁用于商业用途或侵权传播。使用者需自行承担因使用本工具而产生的所有法律责任。</p>
+  </div>
+</div>
+
+<div class="modal-mask" id="confirmModal">
+  <div class="modal">
+    <div class="modal-bd" id="confirmMsg">确认操作？</div>
+    <div class="modal-ft"><button onclick="closeConfirm()">取消</button><button class="primary" id="confirmOkBtn">确定</button></div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const API = "";
+let programs = [];
+let selected = new Set();
+let curPage = 1, pageSize = 20;
+let settings = { threads: "8", quality: "0", mp4: true };
+let saveDir = "/downloads";
+let allTasks = [];
+let recPage = 1, recPageSize = 20;
+
+const ST = {queued:"排队中",running:"下载中",completed:"已完成",failed:"失败",cancelled:"已取消",invalid:"已失效"};
+const SS = {queued:"排队中",resolving:"解析中",downloading:"下载中",concatenating:"合并中",decrypting:"解密中",completed:"已完成"};
+
+function toast(msg){ const t=document.getElementById("toast"); t.textContent=msg; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"),2200); }
+
+// ---------- 鉴权 ----------
+function getToken(){ return localStorage.getItem("cctvdl_token") || ""; }
+function setToken(t){ if(t) localStorage.setItem("cctvdl_token", t); else localStorage.removeItem("cctvdl_token"); }
+
+async function apiFetch(url, opts){
+  opts = opts || {};
+  opts.headers = opts.headers || {};
+  opts.headers["Authorization"] = "Bearer " + getToken();
+  const r = await fetch(API+url, opts);
+  if(r.status === 401){
+    setToken(null);
+    showLogin();
+    throw new Error("未登录");
+  }
+  return r;
+}
+
+function showLogin(){
+  document.getElementById("loginPage").style.display="block";
+  document.getElementById("mainApp").style.display="none";
+  document.getElementById("loginErr").textContent="";
+  document.getElementById("loginPw").value="";
+  setTimeout(()=>document.getElementById("loginPw").focus(), 50);
+}
+function showApp(){
+  document.getElementById("loginPage").style.display="none";
+  document.getElementById("mainApp").style.display="block";
+}
+
+async function doLogin(){
+  const u = document.getElementById("loginUser").value.trim();
+  const p = document.getElementById("loginPw").value;
+  const errEl = document.getElementById("loginErr");
+  errEl.textContent = "";
+  try{
+    const r = await fetch(API+"/api/login", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({username:u, password:p})});
+    if(!r.ok){ const d = await r.json(); errEl.textContent = d.detail || "登录失败"; return; }
+    const d = await r.json();
+    setToken(d.token);
+    showApp();
+    await initApp();
+  }catch(e){ errEl.textContent = "网络错误"; }
+}
+
+function doLogout(){
+  setToken(null);
+  showLogin();
+}
+
+// 启动时检查登录
+async function bootCheck(){
+  if(!getToken()){ showLogin(); return; }
+  // 验证token有效性
+  try{
+    const r = await apiFetch("/api/auth/check");
+    if(r.ok){ showApp(); await initApp(); }
+    else{ setToken(null); showLogin(); }
+  }catch(e){ /* 已showLogin */ }
+}
+
+async function initApp(){
+  loadSettingsLocal();
+  await loadQualities();
+  document.querySelector(`input[name=fmt][value=${settings.mp4?"mp4":"ts"}]`).checked = true;
+  try{ const r=await apiFetch("/api/config"); const cfg=await r.json(); if(cfg.save_dir){ saveDir=cfg.save_dir; document.getElementById("saveDir").textContent=saveDir; } if(cfg.version){ document.getElementById("appVersion").textContent=cfg.version; } }catch(e){}
+}
+
+// ---------- 页签 ----------
+function switchTab(name){
+  document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("active",t.dataset.tab===name));
+  ["main","records","about"].forEach(n=>{ document.getElementById("tab-"+n).style.display = n===name?"":"none"; });
+  if(name==="records") loadTasks();
+}
+
+function showConfirm(msg,onOk){ document.getElementById("confirmMsg").textContent=msg; document.getElementById("confirmOkBtn").onclick=()=>{closeConfirm();onOk();}; document.getElementById("confirmModal").classList.add("show"); }
+function closeConfirm(){ document.getElementById("confirmModal").classList.remove("show"); }
+
+async function loadQualities(){
+  const r=await fetch(API+"/api/qualities"); const qs=await r.json();
+  const sel=document.getElementById("setQuality");
+  sel.innerHTML=qs.map(q=>`<option value="${q.value}">${q.label}</option>`).join("");
+  sel.value=settings.quality; sel.onchange=()=>{settings.quality=sel.value;saveSettings();};
+  const ts=document.getElementById("setThreads");
+  ts.innerHTML=[1,2,4,8,16,32,64].map(n=>`<option value="${n}">${n}</option>`).join("");
+  ts.value=settings.threads; ts.onchange=()=>{settings.threads=ts.value;saveSettings();};
+}
+function onUrlInput(){ document.getElementById("inputBox").classList.toggle("has-val",!!document.getElementById("urlInput").value); }
+function clearUrl(){ document.getElementById("urlInput").value=""; document.getElementById("inputBox").classList.remove("has-val"); document.getElementById("urlInput").focus(); }
+
+async function doFetch(){
+  const url=document.getElementById("urlInput").value.trim();
+  if(!url){ toast("请输入节目链接"); return; }
+  const body=document.getElementById("videoBody");
+  body.innerHTML='<tr><td colspan="4"><div class="empty">解析中...</div></td></tr>';
+  try{
+    const r=await apiFetch("/api/list",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({url})});
+    if(!r.ok){ const e=await r.json(); throw new Error(e.detail||"解析失败"); }
+    const data=await r.json();
+    programs=data.items; selected.clear(); curPage=1;
+    renderList(); updateSelCount(); updateDetail(); updateClearSelBtn();
+    toast(`获取成功，共 ${data.count} 个视频`);
+  }catch(e){ if(e.message!=="未登录"){ body.innerHTML=`<tr><td colspan="4"><div class="empty">${e.message}</div></td></tr>`; toast(e.message);} }
+}
+function renderList(){
+  const total=programs.length;
+  document.getElementById("listCount").textContent = total?`视频列表（共 ${total} 个）`:"视频列表";
+  const body=document.getElementById("videoBody");
+  if(!total){ body.innerHTML='<tr><td colspan="4"><div class="empty">无视频</div></td></tr>'; document.getElementById("pager").style.display="none"; return; }
+  const totalPages=Math.ceil(total/pageSize);
+  if(curPage>totalPages) curPage=totalPages;
+  const start=(curPage-1)*pageSize, end=Math.min(start+pageSize,total);
+  let html="";
+  for(let i=start;i<end;i++){
+    const p=programs[i]; const ck=selected.has(i);
+    html+=`<tr class="${ck?'checked':''}"><td class="chk-col"><input type="checkbox" ${ck?'checked':''} onclick="toggleOne(${i},this)"></td><td class="col-idx">${p.index}</td><td>${p.title}</td><td class="col-len">${p.length_text||'—'}</td></tr>`;
+  }
+  body.innerHTML=html;
+  const pager=document.getElementById("pager");
+  pager.style.display=totalPages>1?"flex":"none";
+  document.getElementById("pageInfo").textContent=`第 ${curPage} / ${totalPages} 页`;
+  document.getElementById("prevBtn").disabled=curPage<=1;
+  document.getElementById("nextBtn").disabled=curPage>=totalPages;
+  syncChkAll();
+}
+function gotoPage(p){ const tp=Math.ceil(programs.length/pageSize); if(p<1||p>tp)return; curPage=p; renderList(); }
+function changePageSize(){ pageSize=parseInt(document.getElementById("pageSize").value); curPage=1; renderList(); }
+function toggleOne(i,el){ if(el.checked)selected.add(i); else selected.delete(i); el.closest("tr").classList.toggle("checked",el.checked); updateSelCount(); syncChkAll(); updateDetail(); updateClearSelBtn(); }
+function toggleAll(el){ const start=(curPage-1)*pageSize, end=Math.min(start+pageSize,programs.length); for(let i=start;i<end;i++){ if(el.checked)selected.add(i); else selected.delete(i);} renderList(); updateSelCount(); updateDetail(); updateClearSelBtn(); }
+function syncChkAll(){ const start=(curPage-1)*pageSize, end=Math.min(start+pageSize,programs.length); let all=end>start, none=true; for(let i=start;i<end;i++){ if(selected.has(i))none=false; else all=false;} const c=document.getElementById("chkAll"); c.checked=all; c.indeterminate=!all&&!none; }
+function updateSelCount(){ document.getElementById("selCount").textContent=selected.size; }
+function updateClearSelBtn(){ document.getElementById("clearSelBtn").style.display = selected.size>0?"inline-block":"none"; }
+function clearSelection(){ selected.clear(); renderList(); updateSelCount(); updateDetail(); updateClearSelBtn(); toast("已清除所有选择"); }
+function updateDetail(){
+  const idxs=[...selected].sort((a,b)=>a-b);
+  const body=document.getElementById("detailBody");
+  if(!idxs.length){ document.getElementById("previewBox").innerHTML="<span>视频封面</span><span class=\"sub\">勾选视频后显示</span>"; body.innerHTML=`<h2>尚未选择视频</h2><div class="meta-row"><span class="k">发布时间</span><span class="v">—</span></div><div class="meta-row"><span class="k">频道</span><span class="v">—</span></div><div class="meta-row"><span class="k">时长</span><span class="v">—</span></div><div class="brief-ph">暂无简介</div>`; return; }
+  const p=programs[idxs[0]]; const more=idxs.length>1?`（及其他 ${idxs.length-1} 个）`:"";
+  document.getElementById("previewBox").innerHTML = p.image ? `<img src="${p.image}" alt="封面" style="width:100%;height:100%;object-fit:cover">` : "<span>无封面</span>";
+  body.innerHTML=`<h2>${p.title}${more}</h2><div class="meta-row"><span class="k">发布时间</span><span class="v">${p.time||'—'}</span></div><div class="meta-row"><span class="k">频道</span><span class="v">${p.channel||'—'}</span></div><div class="meta-row"><span class="k">时长</span><span class="v">${p.length_text||'—'}</span></div><div class="brief-ph">${p.brief||'暂无简介'}</div>`;
+}
+async function startDownload(){
+  if(!selected.size){ toast("请勾选要下载的视频"); return; }
+  const idxs=[...selected].sort((a,b)=>a-b); let ok=0;
+  for(const i of idxs){ const p=programs[i];
+    try{ await apiFetch("/api/download",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({title:p.title,guid:p.guid,quality:settings.quality,threads:parseInt(settings.threads)||8,mp4:settings.mp4})}); ok++; }catch(e){ if(e.message==="未登录")return; }
+  }
+  toast(`已提交 ${ok} 个下载任务，可在「下载记录」查看进度`);
+}
+
+let taskTimer=null;
+async function loadTasks(){
+  try{
+    const r=await apiFetch("/api/tasks"); allTasks=await r.json();
+  }catch(e){ return; }
+  recPage=1; renderTasks();
+}
+function renderTasks(){
+  const total=allTasks.length;
+  document.getElementById("recCount").textContent = total?`共 ${total} 条记录`:"";
+  const box=document.getElementById("taskList");
+  if(!total){ box.innerHTML='<div class="empty">暂无下载记录</div>'; document.getElementById("recPager").style.display="none"; clearTimeout(taskTimer); return; }
+  const totalPages=Math.ceil(total/recPageSize);
+  if(recPage>totalPages) recPage=totalPages;
+  const start=(recPage-1)*recPageSize, end=Math.min(start+recPageSize,total);
+  let html="";
+  for(let i=start;i<end;i++){ const t=allTasks[i];
+    let ops="";
+    if(t.status==="running"||t.status==="queued") ops=`<a class="link-sm" href="javascript:cancelTask('${t.id}')" style="margin-left:8px">取消</a>`;
+    const showBar=t.status==="running"||t.status==="queued";
+    const stateText=t.state?SS[t.state]||t.state:"";
+    html+=`<div class="task-item">
+      <div class="t-hd"><b>${t.title}</b><span class="status-tag st-${t.status}">${ST[t.status]||t.status}</span></div>
+      ${showBar?`<div class="progress-bar"><div style="width:${t.progress}%"></div></div>`:""}
+      <div class="meta">${t.quality_label}${showBar?" · "+stateText+" "+t.progress+"%":""}${t.error?" · "+t.error:""} ${ops}</div>
+    </div>`;
+  }
+  box.innerHTML=html;
+  const pager=document.getElementById("recPager");
+  pager.style.display=totalPages>1?"flex":"none";
+  document.getElementById("recPageInfo").textContent=`第 ${recPage} / ${totalPages} 页`;
+  document.getElementById("recPrevBtn").disabled=recPage<=1;
+  document.getElementById("recNextBtn").disabled=recPage>=totalPages;
+  const active=allTasks.some(t=>t.status==="running"||t.status==="queued");
+  clearTimeout(taskTimer);
+  if(active) taskTimer=setTimeout(loadTasks,1500);
+}
+function gotoRecPage(p){ const tp=Math.ceil(allTasks.length/recPageSize); if(p<1||p>tp)return; recPage=p; renderTasks(); }
+function changeRecPageSize(){ recPageSize=parseInt(document.getElementById("recPageSize").value); recPage=1; renderTasks(); }
+async function cancelTask(id){ await apiFetch("/api/tasks/"+id+"/cancel",{method:"POST"}); toast("已请求取消"); loadTasks(); }
+function clearInvalid(){ showConfirm("确定清理所有失败和已失效的记录吗？", async ()=>{ const r=await apiFetch("/api/tasks/clear-invalid",{method:"POST"}); const d=await r.json(); toast(`已清理 ${d.removed} 条记录`); loadTasks(); }); }
+
+function saveSettings(){ settings.threads=document.getElementById("setThreads").value||"8"; settings.quality=document.getElementById("setQuality").value; settings.mp4=document.querySelector('input[name=fmt]:checked').value==="mp4"; localStorage.setItem("cctvdl_settings",JSON.stringify(settings)); }
+function loadSettingsLocal(){ try{ const s=JSON.parse(localStorage.getItem("cctvdl_settings")); if(s)settings={...settings,...s}; }catch(e){} document.querySelectorAll('input[name=fmt]').forEach(r=>r.onchange=saveSettings); }
+
+bootCheck();
+</script>
+</body>
+</html>
